@@ -1,0 +1,52 @@
+{
+  "name": "@sharp9/ofdjs",
+  "version": "0.1.0",
+  "description": "JavaScript OFD (Open Fixed Document) reader — parse and render OFD documents to Canvas",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "browser": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./render": "./src/render.js",
+    "./types": "./src/types.js",
+    "./elements": "./src/elements.js",
+    "./xml-parser": "./src/xml-parser.js"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "node --input-type=module -e \"import('./src/index.js').then(m => console.log('Exports:', Object.keys(m).join(', ')))\""
+  },
+  "dependencies": {
+    "jszip": "^3.10.1"
+  },
+  "optionalDependencies": {
+    "linkedom": "^0.18.12",
+    "@xmldom/xmldom": "^0.13.2",
+    "canvas": "^3.2.3"
+  },
+  "keywords": [
+    "ofd",
+    "ofd-reader",
+    "open-fixed-document",
+    "chinese-standard",
+    "invoice",
+    "document",
+    "renderer",
+    "canvas"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/isee15/ofdjs.git"
+  },
+  "license": "Apache",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>OFD Reader JS Test</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    #ofd-canvas { border: 1px solid #ccc; max-width: 100%; }
+    .info { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; white-space: pre-wrap; }
+    .error { color: red; }
+    .controls { margin: 10px 0; display: flex; gap: 10px; align-items: center; }
+    .controls button { padding: 5px 15px; cursor: pointer; }
+    .controls span { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>OFD Reader JS — Test Page</h1>
+
+  <div class="info">
+    <label>Select OFD file: </label>
+    <input type="file" id="file-input" accept=".ofd">
+  </div>
+
+  <div class="controls">
+    <button id="prev-page" disabled>← Previous</button>
+    <span id="page-label">Page: -</span>
+    <button id="next-page" disabled>Next →</button>
+  </div>
+
+  <div id="status"></div>
+  <div id="parsed-info" class="info"></div>
+  <canvas id="ofd-canvas"></canvas>
+
+  <!-- JSZip from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
+
+  <script type="module">
+    import { readOfd, renderPageToCanvas, getPageCount, getPageDimensions } from '../src/index.js';
+
+    let currentOfd = null;
+    let currentPage = 0;
+
+    const fileInput = document.getElementById('file-input');
+    const canvas = document.getElementById('ofd-canvas');
+    const status = document.getElementById('status');
+    const parsedInfo = document.getElementById('parsed-info');
+    const prevBtn = document.getElementById('prev-page');
+    const nextBtn = document.getElementById('next-page');
+    const pageLabel = document.getElementById('page-label');
+
+    async function renderCurrentPage() {
+      if (!currentOfd) return;
+      status.textContent = `Rendering page ${currentPage}...`;
+      await renderPageToCanvas(currentOfd, currentPage, canvas);
+      const count = getPageCount(currentOfd);
+      pageLabel.textContent = `Page: ${currentPage + 1} / ${count}`;
+      status.textContent = `Rendered page ${currentPage + 1}. Canvas: ${canvas.width}×${canvas.height}px`;
+    }
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      status.textContent = 'Loading OFD file...';
+      parsedInfo.textContent = '';
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+
+      try {
+        currentOfd = await readOfd(file);
+        currentPage = 0;
+
+        const doc = currentOfd.document;
+        const pageCount = getPageCount(currentOfd);
+        const dims = await getPageDimensions(currentOfd, 0);
+        const info = [
+          `DocRoot: ${currentOfd.node.docBody.docRoot}`,
+          `DocID: ${currentOfd.node.docBody.docInfo.docId}`,
+          `Creator: ${currentOfd.node.docBody.docInfo.creator}`,
+          `CreationDate: ${currentOfd.node.docBody.docInfo.creationDate}`,
+          `PhysicalBox (doc-level): ${doc.commonData.pageArea.physicalBox}`,
+          `Page dimensions (mm): ${dims.width} × ${dims.height}`,
+          `Page count: ${pageCount}`,
+          `Fonts: ${doc.publicRes.fonts.font.map(f => `${f.familyName}(ID:${f.id})`).join(', ')}`,
+          `Media resources: ${doc.docRes.multiMedias.multiMedia.length} items`,
+          `Images pre-loaded: ${currentOfd.images.size} items`,
+        ].join('\n');
+        parsedInfo.textContent = info;
+
+        prevBtn.disabled = currentPage <= 0;
+        nextBtn.disabled = currentPage >= pageCount - 1;
+
+        await renderCurrentPage();
+      } catch (err) {
+        status.textContent = '';
+        status.className = 'error';
+        status.textContent = `Error: ${err.message}\n\n${err.stack}`;
+        console.error(err);
+      }
+    });
+
+    prevBtn.addEventListener('click', async () => {
+      if (currentPage > 0) {
+        currentPage--;
+        prevBtn.disabled = currentPage <= 0;
+        nextBtn.disabled = false;
+        await renderCurrentPage();
+      }
+    });
+
+    nextBtn.addEventListener('click', async () => {
+      const count = getPageCount(currentOfd);
+      if (currentPage < count - 1) {
+        currentPage++;
+        nextBtn.disabled = currentPage >= count - 1;
+        prevBtn.disabled = false;
+        await renderCurrentPage();
+      }
+    });
+  </script>
+</body>
+</html>
